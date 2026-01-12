@@ -15,7 +15,29 @@ Keep the implementation minimal.
 """
 
 # TODO: Fill this in!
-YOUR_REFLEXION_PROMPT = ""
+# Reflexion: 让 LLM 基于错误反馈来改进代码
+YOUR_REFLEXION_PROMPT = """
+You are a coding assistant that improves code based on test failures.
+
+You will receive:
+1. The previous implementation that failed some tests
+2. A list of test failures with diagnostic information
+
+Your task:
+1. Analyze what went wrong based on the failure messages
+2. Fix the implementation to pass all tests
+3. Output ONLY a single fenced Python code block with the corrected function
+
+Password validation rules that must be satisfied:
+- At least 8 characters long
+- At least one lowercase letter
+- At least one uppercase letter  
+- At least one digit
+- At least one special character from: !@#$%^&*()-_
+- No whitespace allowed
+
+Output only the corrected code, no explanations.
+"""
 
 
 # Ground-truth test suite used to evaluate generated code
@@ -96,7 +118,18 @@ def your_build_reflexion_context(prev_code: str, failures: List[str]) -> str:
 
     Return a string that will be sent as the user content alongside the reflexion system prompt.
     """
-    return ""
+    # 构建反思上下文：包含原代码和失败信息
+    failure_list = "\n".join(f"- {f}" for f in failures)
+    return f"""Previous implementation that failed:
+```python
+{prev_code}
+```
+
+Test failures:
+{failure_list}
+
+Please fix the implementation to pass all tests.
+"""
 
 
 def apply_reflexion(

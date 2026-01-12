@@ -7,7 +7,27 @@ load_dotenv()
 NUM_RUNS_TIMES = 5
 
 # TODO: Fill this in!
-YOUR_SYSTEM_PROMPT = ""
+# 展示示例 + 说明推理过程
+YOUR_SYSTEM_PROMPT = """
+You reverse strings character by character. Read the input from right to left and output each character.
+
+Example 1:
+Input: cat
+Characters from right to left: t, a, c
+Output: tac
+
+Example 2:
+Input: httpstatus
+Characters from right to left: s, u, t, a, t, s, p, t, t, h
+Output: sutatsptth
+
+Example 3:
+Input: webserver
+Characters from right to left: r, e, v, r, e, s, b, e, w
+Output: revresbew
+
+Only output the final reversed word. Nothing else.
+"""
 
 USER_PROMPT = """
 Reverse the order of letters in the following word. Only output the reversed word, no other text:

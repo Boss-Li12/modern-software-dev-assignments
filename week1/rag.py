@@ -37,7 +37,20 @@ QUESTION = (
 
 
 # TODO: Fill this in!
-YOUR_SYSTEM_PROMPT = ""
+# RAG: 基于检索到的文档生成代码
+YOUR_SYSTEM_PROMPT = """
+You are a Python developer who writes code based strictly on provided documentation.
+
+Rules:
+1. Use ONLY the information from the provided context/documentation
+2. Do not make up or assume any API endpoints, URLs, or authentication methods
+3. Follow the exact API specification given in the documentation
+4. Write clean, production-ready Python code
+5. Include proper error handling with raise_for_status()
+6. Import all necessary libraries (requests)
+
+Output only the Python code in a fenced code block.
+"""
 
 
 # For this simple example
@@ -56,7 +69,9 @@ def YOUR_CONTEXT_PROVIDER(corpus: List[str]) -> List[str]:
 
     For example, return [] to simulate missing context, or [corpus[0]] to include the API docs.
     """
-    return []
+    # RAG 的核心：返回相关的文档作为上下文
+    # corpus[0] 是 api_docs.txt 的内容
+    return corpus  # 返回所有文档，让 LLM 基于这些文档生成代码
 
 
 def make_user_prompt(question: str, context_docs: List[str]) -> str:

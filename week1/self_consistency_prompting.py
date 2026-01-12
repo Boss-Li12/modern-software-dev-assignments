@@ -9,7 +9,25 @@ load_dotenv()
 NUM_RUNS_TIMES = 5
 
 # TODO: Fill this in! Try to get as close to 100% correctness across all runs as possible.
-YOUR_SYSTEM_PROMPT = ""
+# Self-Consistency: 引导模型逐步推理，多次采样后投票选出最佳答案
+YOUR_SYSTEM_PROMPT = """
+You are a careful math problem solver. Solve problems step by step.
+
+For distance problems, follow these steps:
+1. Identify the total distance
+2. Identify each position/location mentioned
+3. Calculate the distance between positions by subtraction
+4. Double-check your arithmetic
+
+Always show your reasoning step by step, then give your final answer as "Answer: <number>".
+
+Example:
+Problem: A 100-mile road has markers at mile 30 and mile 80. What's the distance between them?
+Step 1: First marker at mile 30
+Step 2: Second marker at mile 80  
+Step 3: Distance = 80 - 30 = 50 miles
+Answer: 50
+"""
 
 USER_PROMPT = """
 Solve this problem, then give the final answer on the last line as "Answer: <number>".

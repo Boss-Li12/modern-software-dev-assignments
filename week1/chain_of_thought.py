@@ -8,7 +8,25 @@ load_dotenv()
 NUM_RUNS_TIMES = 5
 
 # TODO: Fill this in!
-YOUR_SYSTEM_PROMPT = ""
+# Chain-of-Thought: 引导模型逐步推理
+YOUR_SYSTEM_PROMPT = """
+You are a mathematician who solves problems step by step.
+
+For modular exponentiation problems like a^n (mod m), follow these steps:
+
+Step 1: Use Euler's theorem. Calculate φ(m) (Euler's totient function).
+- For m = 100 = 2^2 × 5^2, φ(100) = 100 × (1 - 1/2) × (1 - 1/5) = 40
+
+Step 2: By Euler's theorem, if gcd(a, m) = 1, then a^φ(m) ≡ 1 (mod m).
+
+Step 3: Reduce the exponent: n mod φ(m).
+
+Step 4: Calculate a^(n mod φ(m)) mod m using repeated squaring or direct computation.
+
+Step 5: State the final answer as "Answer: <number>".
+
+Think step by step and show all your work.
+"""
 
 
 USER_PROMPT = """

@@ -21,51 +21,190 @@
 
     <label for="text">Notes</label>
     <textarea id="text" placeholder="Paste notes here...&#10;e.g.&#10;- [ ] Set up database&#10;- Implement extract endpoint"></textarea>
-    <div class="row">
+    
+    <div class="row" style="margin-top: 10px; margin-bottom: 20px;">
       <label class="row"><input id="save_note" type="checkbox" checked /> Save as note</label>
-      <button id="extract">Extract</button>
+      <div style="margin-left: auto; display: flex; gap: 10px;">
+        <button id="extract">Extract (Rules)</button>
+        <button id="extract_llm" style="background-color: #4f46e5; color: white; border: none; border-radius: 4px;">Extract (LLM)</button>
+        <button id="list_notes" style="background-color: #059669; color: white; border: none; border-radius: 4px;">List Notes</button>
+      </div>
     </div>
 
-    <div class="items" id="items"></div>
+    <!-- Extraction Results -->
+    <div id="extraction_section">
+        <h3>Action Items</h3>
+        <div class="items" id="items"></div>
+    </div>
+
+    <!-- Notes List Section -->
+    <div id="notes_section" style="margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+        <h3>Saved Notes</h3>
+        <button id="refresh_notes" style="font-size: 0.8rem; margin-bottom: 10px;">Refresh List</button>
+        <div id="notes_list" class="items"></div>
+    </div>
 
     <script>
       const $ = (sel) => document.querySelector(sel);
       const itemsEl = $('#items');
-      const btn = $('#extract');
-      btn.addEventListener('click', async () => {
+      const notesListEl = $('#notes_list');
+      
+      // Helper to render action items
+      function renderActionItems(items) {
+          if (!items || items.length === 0) {
+            itemsEl.innerHTML = '<p class="muted">No action items found.</p>';
+            return;
+          }
+          itemsEl.innerHTML = items.map(it => (
+            `<div class="item">
+                <input type="checkbox" data-id="${it.id}" ${it.done ? 'checked' : ''} /> 
+                <span style="${it.done ? 'text-decoration: line-through; color: #9ca3af;' : ''}">${it.text}</span>
+            </div>`
+          )).join('');
+          
+          // Add change listeners
+          itemsEl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            cb.addEventListener('change', async (e) => {
+              const id = e.target.getAttribute('data-id');
+              const span = e.target.nextElementSibling;
+              try {
+                  await fetch(`/action-items/${id}/done`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ done: e.target.checked }),
+                  });
+                  // Update UI immediately
+                  if (e.target.checked) {
+                      span.style.textDecoration = 'line-through';
+                      span.style.color = '#9ca3af';
+                  } else {
+                      span.style.textDecoration = 'none';
+                      span.style.color = '';
+                  }
+              } catch (err) {
+                  console.error('Failed to update status', err);
+                  e.target.checked = !e.target.checked; // Revert on error
+              }
+            });
+          });
+      }
+
+      // Shared extract function
+      async function handleExtract(useLLM) {
         const text = $('#text').value;
+        if (!text.trim()) {
+            alert("Please enter some text notes first.");
+            return;
+        }
         const save = $('#save_note').checked;
-        itemsEl.textContent = 'Extracting...';
+        
+        itemsEl.innerHTML = useLLM 
+            ? '<p class="muted">🤖 AI is analyzing your notes... (this may take a few seconds)</p>'
+            : '<p class="muted">Extracting action items...</p>';
+            
         try {
           const res = await fetch('/action-items/extract', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text, save_note: save }),
+            body: JSON.stringify({ text, save_note: save, use_llm: useLLM }),
           });
-          if (!res.ok) throw new Error('Request failed');
-          const data = await res.json();
-          if (!data.items || data.items.length === 0) {
-            itemsEl.innerHTML = '<p class="muted">No action items found.</p>';
-            return;
+          
+          if (!res.ok) {
+              const err = await res.json();
+              throw new Error(err.detail || 'Request failed');
           }
-          itemsEl.innerHTML = data.items.map(it => (
-            `<div class="item"><input type="checkbox" data-id="${it.id}" /> <span>${it.text}</span></div>`
-          )).join('');
-          itemsEl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-            cb.addEventListener('change', async (e) => {
-              const id = e.target.getAttribute('data-id');
-              await fetch(`/action-items/${id}/done`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ done: e.target.checked }),
-              });
-            });
-          });
+          
+          const data = await res.json();
+          renderActionItems(data.items);
+          
+          // If we saved a note, refresh the notes list
+          if (save && data.note_id) {
+              loadNotes();
+          }
         } catch (err) {
           console.error(err);
-          itemsEl.textContent = 'Error extracting items';
+          itemsEl.innerHTML = `<p style="color: red;">Error: ${err.message}</p>`;
         }
-      });
+      }
+
+      // Button Listeners
+      $('#extract').addEventListener('click', () => handleExtract(false));
+      $('#extract_llm').addEventListener('click', () => handleExtract(true));
+      
+      // Load Notes Function
+      async function loadNotes() {
+          notesListEl.innerHTML = '<p class="muted">Loading notes...</p>';
+          try {
+              const res = await fetch('/notes');
+              if (!res.ok) throw new Error('Failed to load notes');
+              
+              const data = await res.json();
+              const notes = data.notes; // Updated for new API structure
+              
+              if (notes.length === 0) {
+                  notesListEl.innerHTML = '<p class="muted">No notes saved yet.</p>';
+                  return;
+              }
+              
+              notesListEl.innerHTML = notes.map(note => `
+                  <div class="note-item" style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; margin-bottom: 10px; background-color: #f9fafb;">
+                      <div class="row" style="justify-content: space-between; margin-bottom: 5px;">
+                          <small class="muted">ID: ${note.id} • ${new Date(note.created_at).toLocaleString()}</small>
+                          <button class="delete-note" data-id="${note.id}" style="padding: 2px 6px; font-size: 0.75rem; background-color: #ef4444; color: white; border: none; border-radius: 3px; cursor: pointer;">Delete</button>
+                      </div>
+                      <div style="white-space: pre-wrap; font-size: 0.9rem;">${note.content}</div>
+                      <div style="margin-top: 8px; font-size: 0.85rem;">
+                          <a href="#" class="view-actions" data-id="${note.id}" style="color: #4f46e5; text-decoration: none;">View Action Items</a>
+                      </div>
+                  </div>
+              `).join('');
+              
+              // Add delete listeners
+              notesListEl.querySelectorAll('.delete-note').forEach(btn => {
+                  btn.addEventListener('click', async (e) => {
+                      if (!confirm('Delete this note and its action items?')) return;
+                      const id = e.target.getAttribute('data-id');
+                      try {
+                          await fetch(`/notes/${id}`, { method: 'DELETE' });
+                          loadNotes(); // Reload list
+                      } catch (err) {
+                          console.error('Failed to delete note', err);
+                          alert('Failed to delete note');
+                      }
+                  });
+              });
+              
+              // Add view listeners
+              notesListEl.querySelectorAll('.view-actions').forEach(link => {
+                  link.addEventListener('click', async (e) => {
+                      e.preventDefault();
+                      const id = e.target.getAttribute('data-id');
+                      itemsEl.innerHTML = '<p class="muted">Loading action items...</p>';
+                      // Scroll to top
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                      try {
+                          const res = await fetch(`/action-items?note_id=${id}`);
+                          if (!res.ok) throw new Error('Failed to load items');
+                          const items = await res.json();
+                          renderActionItems(items);
+                      } catch (err) {
+                          console.error(err);
+                          itemsEl.innerHTML = '<p style="color: red;">Failed to load action items</p>';
+                      }
+                  });
+              });
+              
+          } catch (err) {
+              console.error(err);
+              notesListEl.innerHTML = `<p style="color: red;">Error loading notes: ${err.message}</p>`;
+          }
+      }
+      
+      $('#list_notes').addEventListener('click', loadNotes);
+      $('#refresh_notes').addEventListener('click', loadNotes);
+      
+      // Auto-load notes on start
+      // loadNotes();
 
     </script>
   </body>

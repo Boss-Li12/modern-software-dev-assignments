@@ -114,3 +114,40 @@ def mark_action_item_done(action_item_id: int, done: bool) -> None:
         connection.commit()
 
 
+# ============================================================
+# TODO 3: Additional Database Functions (AI-Generated)
+# ============================================================
+
+def delete_note(note_id: int) -> None:
+    """
+    Delete a note and its associated action items.
+    
+    AI-Generated: This function was added with AI assistance for TODO 3.
+    
+    :param note_id: The ID of the note to delete.
+    """
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        # Delete associated action items first (foreign key constraint)
+        cursor.execute("DELETE FROM action_items WHERE note_id = ?", (note_id,))
+        # Delete the note
+        cursor.execute("DELETE FROM notes WHERE id = ?", (note_id,))
+        connection.commit()
+
+
+def get_action_item(action_item_id: int) -> Optional[sqlite3.Row]:
+    """
+    Get a single action item by ID.
+    
+    AI-Generated: This function was added with AI assistance for TODO 3.
+    
+    :param action_item_id: The ID of the action item to retrieve.
+    :return: The action item row or None if not found.
+    """
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute(
+            "SELECT id, note_id, text, done, created_at FROM action_items WHERE id = ?",
+            (action_item_id,),
+        )
+        return cursor.fetchone()

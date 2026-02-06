@@ -6,6 +6,13 @@ class NoteCreate(BaseModel):
     content: str
 
 
+class NoteUpdate(BaseModel):
+    """Schema for updating a note"""
+
+    title: str
+    content: str
+
+
 class NoteRead(BaseModel):
     id: int
     title: str
